@@ -1,0 +1,32 @@
+[package]
+name = "car-color"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.4", features = ["macros", "multipart"] }
+axum-valid = "0.15.0"
+casbin = { version = "2.2.0", features = ["tokio"] }
+chrono = "0.4.34"
+chrono-tz = "0.8.6"
+clap = { version = "4.5.0", features = ["derive"] }
+futures = "0.3.30"
+futures-util = "0.3.30"
+hmac = "0.12.1"
+jwt = "0.16.0"
+log = "0.4.20"
+mongodb = "2.8.1"
+rs-snowflake = "0.6.0"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
+thiserror = "1.0.57"
+tokio = { version = "1.36.0", features = ["full"] }
+toml = "0.8.10"
+tower = "0.4.13"
+tower-http = { version = "0.5.1", features = ["full"] }
+validator = { version = "0.16.1", features = ["derive"] }
+sha2 = "0.10.8"
+md5 = "0.7.0"
+async-trait = "0.1.80"

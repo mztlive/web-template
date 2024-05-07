@@ -1,0 +1,6 @@
+secret = "secret"
+statistic_host = "http://localhost:3000"
+
+[database]
+uri = "mongodb://dev:devdev@localhost:27017/admin"
+db_name = "car-paint"
