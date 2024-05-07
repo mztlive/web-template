@@ -19,20 +19,6 @@ pub struct UserID(pub String);
 #[derive(Debug, Clone)]
 pub struct Account(pub String);
 
-pub trait User {
-    fn id(&self) -> String;
-    fn name(&self) -> String;
-    fn account(&self) -> String;
-}
-
-pub trait UserRepository {
-    async fn find_by_id(
-        &self,
-        id: &str,
-        db: &Database,
-    ) -> std::result::Result<Option<Box<dyn User>>, errors::Error>;
-}
-
 /// Authorization middleware
 pub async fn authorization(
     State(state): State<AppState>,
@@ -55,8 +41,6 @@ pub async fn authorization(
 
     match state.jwt.verify_token(token) {
         Ok(payload) => {
-            // TODO: check if the user is in the database
-
             request.extensions_mut().insert(UserID(payload.id));
             request.extensions_mut().insert(Account(payload.account));
             next.run(request).await

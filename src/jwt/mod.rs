@@ -6,6 +6,8 @@ use jwt::{Claims, RegisteredClaims, SignWithKey, VerifyWithKey};
 use serde_json::Value;
 use sha2::Sha256;
 
+use crate::domain::user::User;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("jwt error: {0}")]
@@ -67,6 +69,16 @@ impl From<BTreeMap<String, Value>> for TokenPayload {
     }
 }
 
+impl From<User> for TokenPayload {
+    fn from(user: User) -> Self {
+        Self {
+            id: user.base.id,
+            account: user.secret.account,
+            role: user.role_name,
+        }
+    }
+}
+
 impl Engine {
     pub fn new(secret: String) -> Result<Self, Error> {
         let out = Self {
@@ -82,16 +94,17 @@ impl Engine {
     ///
     /// This function will return an error if .
     /// * the token can not be created (sign failed)
-    pub fn create_token(&self, payload: TokenPayload) -> Result<String, Error> {
+    pub fn create_token<T: Into<TokenPayload>>(&self, payload: T) -> Result<String, Error> {
         let expiration = Utc::now().add(Duration::days(30)).timestamp();
+        let infomation = payload.into();
 
         let mut claims = Claims::new(RegisteredClaims {
-            subject: Some(payload.id.clone()),
+            subject: Some(infomation.id.clone()),
             expiration: Some(expiration as u64),
             ..Default::default()
         });
 
-        claims.private = payload.into();
+        claims.private = infomation.into();
 
         let token = claims.sign_with_key(&self.key)?;
 

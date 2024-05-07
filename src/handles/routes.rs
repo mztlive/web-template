@@ -32,7 +32,7 @@ pub fn create(app_state: AppState) -> Router {
     // build our application with a single route
     let app = Router::new()
         .route("/login", post(login::login))
-        // .nest("/", secret_routes(app_state.clone()))
+        .nest("/", secret_routes(app_state.clone()))
         .with_state(app_state)
         .layer(
             ServiceBuilder::new()
@@ -68,7 +68,8 @@ fn rbac_routes(state: AppState) -> Router<AppState> {
 /// Returns a `Router` configured with secret routes.
 fn secret_routes(state: AppState) -> Router<AppState> {
     Router::new()
-        .nest("/", rbac_routes(state.clone()))
+        .route("/test-auth", get({ "test-auth" }))
+        // .nest("/", rbac_routes(state.clone()))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             middlewares::authorization,

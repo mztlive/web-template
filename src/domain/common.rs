@@ -27,6 +27,15 @@ pub struct Secret {
 }
 
 impl Secret {
+    pub fn fake() -> Self {
+        let password = format!("{:x}", md5::compute("fake".as_bytes()));
+
+        Self {
+            account: "fake".to_string(),
+            password,
+        }
+    }
+
     pub fn new(account: String, password: String) -> std::result::Result<Self, Error> {
         if password.is_empty() {
             return Err(Error::LogicError("密码不能为空".to_string()));

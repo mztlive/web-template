@@ -30,6 +30,16 @@ impl BaseModel {
     pub fn delete(&mut self) {
         self.deleted_at = Utc::now().timestamp() as u64;
     }
+
+    pub fn fake() -> Self {
+        BaseModel {
+            id: "fake".to_string(),
+            created_at: 0,
+            updated_at: 0,
+            deleted_at: 0,
+            version: 0,
+        }
+    }
 }
 
 /// compare the difference between the target_ids and the models.
