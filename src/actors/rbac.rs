@@ -6,8 +6,6 @@ use tokio::sync::{
     oneshot,
 };
 
-use async_trait::async_trait;
-
 const MODEL: &str = r#"
 [request_definition]
 r = sub, action
@@ -27,7 +25,7 @@ m = g(r.sub, p.sub) && r.action == p.action || r.sub == "bozzasggmy"
 
 use crate::database::{self};
 
-pub struct FetcherError(pub String);
+use super::fetcher::{self, RBACRole, RBACRoleFetcher, RBACUser, RBACUserFetcher};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -39,6 +37,9 @@ pub enum Error {
 
     #[error("Other error: {0}")]
     OtherError(String),
+
+    #[error("Fetcher error: {0}")]
+    FetcherError(#[from] fetcher::Error),
 }
 
 impl From<String> for Error {
@@ -47,7 +48,9 @@ impl From<String> for Error {
     }
 }
 
+/// command for rbac actor
 pub enum Command {
+    /// check permission
     CheckPermission {
         user: String,
         action: String,
@@ -56,47 +59,21 @@ pub enum Command {
     Reset,
 }
 
-pub trait RBACRole: Send {
-    fn to_casbin_policy(&self) -> Vec<Vec<String>>;
-}
-
-pub trait RBACUser: Send {
-    fn account(&self) -> String;
-
-    fn role_name(&self) -> String;
-}
-
-#[async_trait]
-pub trait RBACRoleFetcher: Send {
-    async fn find_all(
-        &self,
-        database: &Database,
-    ) -> std::result::Result<Vec<Box<dyn RBACRole>>, String>;
-}
-
-#[async_trait]
-pub trait RBACUserFetcher: Send {
-    async fn find_all(
-        &self,
-        database: &Database,
-    ) -> std::result::Result<Vec<Box<dyn RBACUser>>, String>;
-}
-
-struct RbacActor {
+struct RbacActor<R: RBACRoleFetcher, U: RBACUserFetcher> {
     receiver: Receiver<Command>,
     database: Database,
     enforcer: Enforcer,
-    role_fetcher: Box<dyn RBACRoleFetcher>,
-    user_fetcher: Box<dyn RBACUserFetcher>,
+    role_fetcher: R,
+    user_fetcher: U,
 }
 
-impl RbacActor {
+impl<R: RBACRoleFetcher, U: RBACUserFetcher> RbacActor<R, U> {
     pub fn new(
         receiver: Receiver<Command>,
         database: Database,
         enforcer: Enforcer,
-        role_fetcher: Box<dyn RBACRoleFetcher>,
-        user_fetcher: Box<dyn RBACUserFetcher>,
+        role_fetcher: R,
+        user_fetcher: U,
     ) -> Self {
         RbacActor {
             receiver,
@@ -112,8 +89,8 @@ impl RbacActor {
             println!("Failed to clear polices: {}", err);
         }
 
-        let all_roles = self.role_fetcher.find_all(&self.database).await?;
-        let all_users = self.user_fetcher.find_all(&self.database).await?;
+        let all_roles: Vec<Box<dyn RBACRole>> = self.role_fetcher.find_all(&self.database).await?;
+        let all_users: Vec<Box<dyn RBACUser>> = self.user_fetcher.find_all(&self.database).await?;
         let roles_len = all_roles.len();
         let users_len = all_users.len();
 
@@ -154,7 +131,7 @@ impl RbacActor {
     }
 }
 
-async fn run_actor(mut actor: RbacActor) {
+async fn run_actor<R: RBACRoleFetcher, U: RBACUserFetcher>(mut actor: RbacActor<R, U>) {
     while let Some(command) = actor.receiver.recv().await {
         if let Err(err) = actor.handle_message(command).await {
             println!("Failed to handle message: {}", err);
@@ -175,11 +152,11 @@ impl RbacActorHandler {
     /// Panics if
     /// - casbin enforcer create failed.
     /// - load polices from database failed.
-    pub async fn new(
-        database: Database,
-        role_fetcher: Box<dyn RBACRoleFetcher>,
-        user_fetcher: Box<dyn RBACUserFetcher>,
-    ) -> Self {
+    pub async fn new<R, U>(database: Database, role_fetcher: R, user_fetcher: U) -> Self
+    where
+        R: RBACRoleFetcher + 'static,
+        U: RBACUserFetcher + 'static,
+    {
         let (sender, receiver) = tokio::sync::mpsc::channel(100);
         let casbin_enforcer = create_enforcer().await.unwrap();
         let mut actor = RbacActor::new(

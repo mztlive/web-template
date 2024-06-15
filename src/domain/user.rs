@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::actors::rbac;
+use crate::actors::{fetcher, rbac};
 
 use super::{common::Secret, BaseModel};
 
@@ -17,7 +17,7 @@ pub struct User {
     pub role_name: String,
 }
 
-impl rbac::RBACUser for User {
+impl fetcher::RBACUser for User {
     fn account(&self) -> String {
         self.name.clone()
     }

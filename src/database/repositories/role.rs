@@ -1,6 +1,10 @@
 use mongodb::{bson::doc, Database};
+use serde::de::DeserializeOwned;
 
-use crate::{actors::rbac, domain::role::Role};
+use crate::{
+    actors::fetcher::{self, Error, RBACRole},
+    domain::role::Role,
+};
 
 use super::collection_names::ROLE;
 
@@ -21,11 +25,8 @@ impl RoleRepository {
 }
 
 #[async_trait]
-impl rbac::RBACRoleFetcher for RoleRepository {
-    async fn find_all(
-        &self,
-        database: &Database,
-    ) -> std::result::Result<Vec<Box<dyn rbac::RBACRole>>, String> {
+impl fetcher::RBACRoleFetcher for RoleRepository {
+    async fn find_all(&self, database: &Database) -> Result<Vec<Box<dyn RBACRole>>, Error> {
         let mut items = database
             .collection::<Role>(self.coll_name.as_str())
             .find(
@@ -34,13 +35,12 @@ impl rbac::RBACRoleFetcher for RoleRepository {
                 },
                 None,
             )
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
-        let mut out: Vec<Box<dyn rbac::RBACRole>> = vec![];
+        let mut out: Vec<Box<dyn RBACRole>> = vec![];
 
         while let Some(item) = items.next().await {
-            let item = item.map_err(|e| e.to_string())?;
+            let item = item?;
             out.push(Box::new(item));
         }
 

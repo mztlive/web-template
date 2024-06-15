@@ -37,8 +37,8 @@ async fn main() {
 
     let rbac_engine = RbacActorHandler::new(
         db.clone(),
-        Box::new(repositories::role::RoleRepository::new()),
-        Box::new(repositories::user::UserRepository::new()),
+        repositories::role::RoleRepository::new(),
+        repositories::user::UserRepository::new(),
     )
     .await;
 

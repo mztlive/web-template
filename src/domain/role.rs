@@ -1,6 +1,7 @@
+use axum::Form;
 use serde::{Deserialize, Serialize};
 
-use crate::actors::rbac;
+use crate::actors::{fetcher, rbac};
 
 use super::BaseModel;
 
@@ -29,7 +30,7 @@ impl Role {
     }
 }
 
-impl rbac::RBACRole for Role {
+impl fetcher::RBACRole for Role {
     fn to_casbin_policy(&self) -> Vec<Vec<String>> {
         let mut out: Vec<Vec<String>> = vec![];
 

@@ -1,7 +1,7 @@
 use mongodb::{bson::doc, Database};
 
 use crate::{
-    actors::rbac,
+    actors::{fetcher, rbac},
     domain::{common::Secret, role::Role, user::User, BaseModel},
 };
 
@@ -54,11 +54,11 @@ impl UserRepository {
 }
 
 #[async_trait]
-impl rbac::RBACUserFetcher for UserRepository {
+impl fetcher::RBACUserFetcher for UserRepository {
     async fn find_all(
         &self,
         database: &Database,
-    ) -> std::result::Result<Vec<Box<dyn rbac::RBACUser>>, String> {
+    ) -> std::result::Result<Vec<Box<dyn fetcher::RBACUser>>, fetcher::Error> {
         let collection = database.collection::<User>(self.coll_name.as_str());
         let mut cursor = collection
             .find(
@@ -67,13 +67,12 @@ impl rbac::RBACUserFetcher for UserRepository {
                 },
                 None,
             )
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
 
-        let mut users: Vec<Box<dyn rbac::RBACUser>> = vec![];
+        let mut users: Vec<Box<dyn fetcher::RBACUser>> = vec![];
 
         while let Some(result) = cursor.next().await {
-            let user = result.map_err(|e| e.to_string())?;
+            let user = result?;
             users.push(Box::new(user));
         }
 
